@@ -354,6 +354,30 @@
   </div>
 </div>
 
+<!-- Earnings row -->
+<div class="grid row-4" style="margin-bottom:16px;">
+  <div class="card">
+    <div class="card-label">Feb Earned (Actual)</div>
+    <div class="card-value green" id="statEarningsActual">—</div>
+    <div class="card-sub">from Amazon Associates</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Daily Avg Earnings</div>
+    <div class="card-value" id="statEarningsAvg">—</div>
+    <div class="card-sub">per day this month</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Feb Projected Close</div>
+    <div class="card-value gold" id="statEarningsProjected">—</div>
+    <div class="card-sub">at current pace</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Days of Data</div>
+    <div class="card-value blue" id="statEarningsDays">—</div>
+    <div class="card-sub">with earnings logged</div>
+  </div>
+</div>
+
 <!-- Stats row -->
 <div class="grid row-4" style="margin-bottom:16px;">
   <div class="card">
@@ -425,8 +449,13 @@
       <label>Videos Uploaded</label>
       <input type="number" id="logVideos" placeholder="e.g. 20" min="0">
     </div>
+    <div class="form-group">
+      <label>Amazon Total Earnings ($)</label>
+      <input type="number" id="logEarnings" placeholder="e.g. 458.48" min="0" step="0.01">
+    </div>
     <button class="btn" onclick="addEntry()">Log Day</button>
   </div>
+  <div style="font-size:11px; color:#5a5a7a; margin-top:8px;">Earnings = cumulative month total from Amazon Associates Summary tab</div>
 
   <table class="log-table" id="logTable">
     <thead>
@@ -435,7 +464,8 @@
         <th>Videos</th>
         <th>Goal</th>
         <th>Delta</th>
-        <th>Cumulative</th>
+        <th>Cum. Videos</th>
+        <th>Amazon Total</th>
         <th></th>
       </tr>
     </thead>
@@ -466,24 +496,25 @@ let state = {
 };
 
 // Pre-populate with known data from the spreadsheet
+// earnings = cumulative Amazon Associates Summary total as of that date
 const SEED_DATA = [
-  { date: '2026-02-02', videos: 5  },
-  { date: '2026-02-03', videos: 39 },
-  { date: '2026-02-04', videos: 0  },
-  { date: '2026-02-05', videos: 52 },
-  { date: '2026-02-06', videos: 27 },
-  { date: '2026-02-07', videos: 0  },
-  { date: '2026-02-08', videos: 0  },
-  { date: '2026-02-09', videos: 40 },
-  { date: '2026-02-10', videos: 20 },
-  { date: '2026-02-11', videos: 4  },
-  { date: '2026-02-12', videos: 11 },
-  { date: '2026-02-13', videos: 20 },
-  { date: '2026-02-14', videos: 1  },
-  { date: '2026-02-15', videos: 0  },
-  { date: '2026-02-16', videos: 11 },
-  { date: '2026-02-17', videos: 11 },
-  { date: '2026-02-18', videos: 30 },
+  { date: '2026-02-02', videos: 5,  earnings: null  },
+  { date: '2026-02-03', videos: 39, earnings: null  },
+  { date: '2026-02-04', videos: 0,  earnings: null  },
+  { date: '2026-02-05', videos: 52, earnings: null  },
+  { date: '2026-02-06', videos: 27, earnings: null  },
+  { date: '2026-02-07', videos: 0,  earnings: null  },
+  { date: '2026-02-08', videos: 0,  earnings: null  },
+  { date: '2026-02-09', videos: 40, earnings: null  },
+  { date: '2026-02-10', videos: 20, earnings: null  },
+  { date: '2026-02-11', videos: 4,  earnings: null  },
+  { date: '2026-02-12', videos: 11, earnings: null  },
+  { date: '2026-02-13', videos: 20, earnings: null  },
+  { date: '2026-02-14', videos: 1,  earnings: null  },
+  { date: '2026-02-15', videos: 0,  earnings: null  },
+  { date: '2026-02-16', videos: 11, earnings: null  },
+  { date: '2026-02-17', videos: 11, earnings: 458.48 },
+  { date: '2026-02-18', videos: 30, earnings: null  },
 ];
 
 // Only seed if log is empty
@@ -614,10 +645,21 @@ function compute() {
     day.setDate(day.getDate() + 1);
   }
 
+  // Earnings — find the most recent entry with an earnings value
+  const entriesWithEarnings = log.filter(e => e.earnings != null).sort((a, b) => b.date.localeCompare(a.date));
+  const latestEarningsEntry = entriesWithEarnings[0] || null;
+  const latestEarnings = latestEarningsEntry ? latestEarningsEntry.earnings : null;
+  const earningsDaysElapsed = latestEarningsEntry ? daysBetween(start, parseDate(latestEarningsEntry.date)) + 1 : null;
+  const dailyEarningsAvg = (latestEarnings && earningsDaysElapsed) ? latestEarnings / earningsDaysElapsed : null;
+  const daysInMonth = daysBetween(start, end) + 1;
+  const projectedMonthEarnings = dailyEarningsAvg ? dailyEarningsAvg * daysInMonth : null;
+
   return {
     uploadedThisPeriod, totalLibrary, delta, avgPerWeekday, projectedEnd,
     projectedRevenue, daysLeft, weekdaysLeft, weekdaysElapsed,
     goalThrough, series, log,
+    latestEarnings, dailyEarningsAvg, projectedMonthEarnings,
+    earningsDaysElapsed, entriesWithEarnings,
   };
 }
 
@@ -644,6 +686,12 @@ function render() {
 
   document.getElementById('runRate').textContent = fmt$(c.projectedRevenue);
   document.getElementById('avgPerDay').textContent = c.avgPerWeekday.toFixed(1);
+
+  // Earnings cards
+  document.getElementById('statEarningsActual').textContent = c.latestEarnings != null ? '$' + c.latestEarnings.toFixed(2) : '—';
+  document.getElementById('statEarningsAvg').textContent = c.dailyEarningsAvg != null ? '$' + c.dailyEarningsAvg.toFixed(2) + '/day' : '—';
+  document.getElementById('statEarningsProjected').textContent = c.projectedMonthEarnings != null ? fmt$(c.projectedMonthEarnings) : '—';
+  document.getElementById('statEarningsDays').textContent = c.earningsDaysElapsed != null ? c.earningsDaysElapsed : '—';
 
   // Stats
   const deltaEl = document.getElementById('statDelta');
@@ -786,6 +834,7 @@ function render() {
         <td>${dayGoal}</td>
         <td class="${delta >= 0 ? 'pos' : 'neg'}">${delta >= 0 ? '+' : ''}${delta}</td>
         <td>${cum}</td>
+        <td>${entry.earnings != null ? '<span style="color:#34d399;">$' + entry.earnings.toFixed(2) + '</span>' : '<span style="color:#3a3a4a;">—</span>'}</td>
         <td><button class="btn btn-danger" onclick="deleteEntry(${i})">✕</button></td>
       </tr>
     `;
@@ -794,8 +843,10 @@ function render() {
 
 // ─── ACTIONS ──────────────────────────────────────────────────────────────────
 function addEntry() {
-  const date   = document.getElementById('logDate').value;
-  const videos = parseInt(document.getElementById('logVideos').value);
+  const date     = document.getElementById('logDate').value;
+  const videos   = parseInt(document.getElementById('logVideos').value);
+  const earningsRaw = document.getElementById('logEarnings').value;
+  const earnings = earningsRaw !== '' ? parseFloat(earningsRaw) : null;
 
   if (!date || isNaN(videos) || videos < 0) {
     alert('Please enter a valid date and video count.');
@@ -806,14 +857,16 @@ function addEntry() {
   const existing = state.log.findIndex(e => e.date === date);
   if (existing >= 0) {
     state.log[existing].videos = videos;
+    if (earnings !== null) state.log[existing].earnings = earnings;
   } else {
-    state.log.push({ date, videos });
+    state.log.push({ date, videos, earnings });
   }
 
   save();
   render();
 
   document.getElementById('logVideos').value = '';
+  document.getElementById('logEarnings').value = '';
 }
 
 function deleteEntry(index) {
