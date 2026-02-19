@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIP Dashboard — Jamie</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f0f13;
+    color: #e8e8f0;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #6b6b8a;
+    margin-bottom: 24px;
+  }
+
+  .grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .row-3 { grid-template-columns: repeat(3, 1fr); }
+  .row-2 { grid-template-columns: repeat(2, 1fr); }
+  .row-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .card {
+    background: #1a1a24;
+    border: 1px solid #2a2a3a;
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #5a5a7a;
+    margin-bottom: 8px;
+  }
+
+  .card-value {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    color: #e8e8f0;
+  }
+
+  .card-value.green { color: #34d399; }
+  .card-value.red { color: #f87171; }
+  .card-value.gold { color: #fbbf24; }
+  .card-value.blue { color: #60a5fa; }
+
+  .card-sub {
+    font-size: 12px;
+    color: #5a5a7a;
+    margin-top: 6px;
+  }
+
+  /* Hero card */
+  .hero {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #2a2a4a;
+    border-radius: 12px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
+
+  .hero-left h2 {
+    font-size: 48px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
+
+  .hero-left p {
+    font-size: 13px;
+    color: #6b6b8a;
+    margin-top: 6px;
+  }
+
+  .hero-right {
+    text-align: right;
+  }
+
+  .hero-right .pace-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #5a5a7a;
+  }
+
+  .hero-right .pace-value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  /* Progress bars */
+  .milestone-section { margin-top: 4px; }
+
+  .milestone {
+    margin-bottom: 16px;
+  }
+
+  .milestone-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+
+  .milestone-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #8888aa;
+    letter-spacing: 0.08em;
+  }
+
+  .milestone-stats {
+    font-size: 11px;
+    color: #5a5a7a;
+  }
+
+  .progress-track {
+    height: 8px;
+    background: #2a2a3a;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+
+  .fill-tier1 { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+  .fill-tier2 { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+  .fill-tier3 { background: linear-gradient(90deg, #10b981, #34d399); }
+
+  .milestone-revenue {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #5a5a7a;
+  }
+
+  /* Status badge */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .badge.ahead { background: #064e3b; color: #34d399; }
+  .badge.behind { background: #7f1d1d; color: #f87171; }
+
+  /* Income replacement */
+  .income-bar-wrap {
+    margin-top: 12px;
+  }
+
+  .income-bar-track {
+    height: 20px;
+    background: #2a2a3a;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .income-bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    transition: width 0.6s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+  }
+
+  .income-bar-fill span {
+    font-size: 10px;
+    font-weight: 700;
+    color: #000;
+    white-space: nowrap;
+  }
+
+  .income-target-line {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 11px;
+    color: #5a5a7a;
+  }
+
+  /* Chart */
+  .chart-wrap {
+    position: relative;
+    height: 220px;
+  }
+
+  /* Log form */
+  .log-form {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #5a5a7a;
+  }
+
+  .form-group input {
+    background: #0f0f13;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    color: #e8e8f0;
+    font-size: 14px;
+    padding: 8px 12px;
+    outline: none;
+    width: 140px;
+  }
+
+  .form-group input:focus {
+    border-color: #6366f1;
+  }
+
+  .btn {
+    background: #6366f1;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn:hover { background: #4f46e5; }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid #3a2a2a;
+    color: #f87171;
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  .btn-danger:hover { background: #3a1a1a; }
+
+  /* Log table */
+  .log-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 13px;
+  }
+
+  .log-table th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #5a5a7a;
+    padding: 6px 8px;
+    border-bottom: 1px solid #2a2a3a;
+  }
+
+  .log-table td {
+    padding: 8px 8px;
+    border-bottom: 1px solid #1e1e2a;
+    color: #c8c8d8;
+  }
+
+  .log-table tr:last-child td { border-bottom: none; }
+
+  .log-table td.pos { color: #34d399; }
+  .log-table td.neg { color: #f87171; }
+
+  /* Section heading */
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #5a5a7a;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a2a3a;
+  }
+
+  @media (max-width: 900px) {
+    .row-3, .row-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 600px) {
+    .row-3, .row-4, .row-2 { grid-template-columns: 1fr; }
+    .hero { flex-direction: column; }
+    .hero-right { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<h1>AIP Video Tracker &nbsp;·&nbsp; Jamie</h1>
+
+<!-- Hero -->
+<div class="hero" style="margin-bottom:16px;">
+  <div class="hero-left">
+    <h2 id="heroCount">—</h2>
+    <p>Total video library &nbsp;·&nbsp; <span id="heroDaysLeft">—</span> days left in period</p>
+    <div style="margin-top:10px;">
+      <span id="paceBadge" class="badge ahead">—</span>
+      <span id="paceDetail" style="font-size:12px; color:#6b6b8a; margin-left:8px;"></span>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="pace-label">Current monthly run rate</div>
+    <div class="pace-value gold" id="runRate">—</div>
+    <div style="font-size:11px; color:#5a5a7a; margin-top:4px;">based on <span id="avgPerDay">—</span> videos/day avg</div>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="grid row-4" style="margin-bottom:16px;">
+  <div class="card">
+    <div class="card-label">Videos Today's Goal</div>
+    <div class="card-value blue" id="statGoalToday">20</div>
+    <div class="card-sub">per day target</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Ahead / Behind</div>
+    <div class="card-value" id="statDelta">—</div>
+    <div class="card-sub">vs goal through today</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Projected Library (Mar 1)</div>
+    <div class="card-value" id="statProjected">—</div>
+    <div class="card-sub">total videos at end of period</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Projected Revenue</div>
+    <div class="card-value gold" id="statRevenue">—</div>
+    <div class="card-sub">next full month</div>
+  </div>
+</div>
+
+<!-- Milestones + Income side by side -->
+<div class="grid row-2" style="margin-bottom:16px;">
+
+  <div class="card">
+    <div class="section-title">Milestone Progress</div>
+    <div class="milestone-section" id="milestones"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Income Replacement</div>
+    <div class="card-label">Target monthly income</div>
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+      <div class="card-value gold" id="incomeTargetDisplay">—</div>
+      <div>
+        <input id="incomeTargetInput" type="number" placeholder="e.g. 5000"
+          style="background:#0f0f13; border:1px solid #2a2a3a; border-radius:8px; color:#e8e8f0; font-size:14px; padding:6px 10px; width:120px; outline:none;"
+          oninput="updateIncomeTarget(this.value)">
+        <div style="font-size:10px; color:#5a5a7a; margin-top:3px;">edit target</div>
+      </div>
+    </div>
+
+    <div id="incomeReplacementBars"></div>
+  </div>
+
+</div>
+
+<!-- Chart -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="section-title">Actual vs Goal — Cumulative Videos</div>
+  <div class="chart-wrap">
+    <canvas id="chart"></canvas>
+  </div>
+</div>
+
+<!-- Log -->
+<div class="card">
+  <div class="section-title">Daily Log</div>
+
+  <div class="log-form">
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="logDate">
+    </div>
+    <div class="form-group">
+      <label>Videos Uploaded</label>
+      <input type="number" id="logVideos" placeholder="e.g. 20" min="0">
+    </div>
+    <button class="btn" onclick="addEntry()">Log Day</button>
+  </div>
+
+  <table class="log-table" id="logTable">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Videos</th>
+        <th>Goal</th>
+        <th>Delta</th>
+        <th>Cumulative</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="logBody"></tbody>
+  </table>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+const CONFIG = {
+  startDate: '2026-02-02',
+  endDate:   '2026-03-01',
+  dailyGoal: 20,
+  revenuePerVideo: 1.50,   // per video per full month
+  liveDayDelay: 6,          // days until video goes live after upload
+  startingLibrary: 198,     // videos existing before period started
+  milestones: [
+    { label: 'POC Tier 1', target: 598,  color: 'fill-tier1' },
+    { label: 'POC Tier 2', target: 998,  color: 'fill-tier2' },
+    { label: 'POC Tier 3', target: 1398, color: 'fill-tier3' },
+  ],
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  incomeTarget: parseFloat(localStorage.getItem('aip_incomeTarget')) || 5000,
+  log: JSON.parse(localStorage.getItem('aip_log') || '[]'),
+};
+
+// Pre-populate with known data from the spreadsheet
+const SEED_DATA = [
+  { date: '2026-02-02', videos: 5  },
+  { date: '2026-02-03', videos: 39 },
+  { date: '2026-02-04', videos: 0  },
+  { date: '2026-02-05', videos: 52 },
+  { date: '2026-02-06', videos: 27 },
+  { date: '2026-02-07', videos: 0  },
+  { date: '2026-02-08', videos: 0  },
+  { date: '2026-02-09', videos: 40 },
+  { date: '2026-02-10', videos: 20 },
+  { date: '2026-02-11', videos: 4  },
+  { date: '2026-02-12', videos: 11 },
+  { date: '2026-02-13', videos: 20 },
+  { date: '2026-02-14', videos: 1  },
+  { date: '2026-02-15', videos: 0  },
+  { date: '2026-02-16', videos: 11 },
+  { date: '2026-02-17', videos: 11 },
+  { date: '2026-02-18', videos: 30 },
+];
+
+// Only seed if log is empty
+if (state.log.length === 0) {
+  state.log = SEED_DATA.map(d => ({ ...d }));
+  save();
+}
+
+function save() {
+  localStorage.setItem('aip_log', JSON.stringify(state.log));
+  localStorage.setItem('aip_incomeTarget', state.incomeTarget);
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function parseDate(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function daysBetween(a, b) {
+  return Math.round((b - a) / 86400000);
+}
+
+function fmt$(n) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+// Revenue for a video uploaded on uploadDate, for a reference month
+// Logic: video goes live ~6 days after upload
+// Revenue = $1.50 * (remainingDaysInMonth / daysInMonth)
+function prorateFactor(uploadDateStr, refMonthStart, refMonthEnd) {
+  const upload = parseDate(uploadDateStr);
+  const liveDate = new Date(upload);
+  liveDate.setDate(liveDate.getDate() + CONFIG.liveDayDelay);
+
+  const monthDays = daysBetween(refMonthStart, refMonthEnd) + 1;
+  const remainingDays = daysBetween(liveDate, refMonthEnd) + 1;
+
+  if (remainingDays <= 0) return 0;
+  return Math.min(remainingDays / monthDays, 1);
+}
+
+// ─── COMPUTE ──────────────────────────────────────────────────────────────────
+function compute() {
+  const start = parseDate(CONFIG.startDate);
+  const end   = parseDate(CONFIG.endDate);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const totalPeriodDays = daysBetween(start, end);
+  const daysElapsed     = Math.min(daysBetween(start, today), totalPeriodDays);
+  const daysLeft        = Math.max(daysBetween(today, end), 0);
+
+  // Helper: is a date a weekday (Mon-Fri)?
+  function isWeekday(d) { const dow = d.getDay(); return dow !== 0 && dow !== 6; }
+
+  // Count weekdays elapsed and remaining
+  let weekdaysElapsed = 0;
+  let weekdaysLeft = 0;
+  let cursor = new Date(start);
+  while (cursor <= end) {
+    const isPast = cursor <= today;
+    const isFuture = cursor > today;
+    if (isWeekday(cursor)) {
+      if (isPast) weekdaysElapsed++;
+      if (isFuture) weekdaysLeft++;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  // Sort log
+  const log = [...state.log].sort((a, b) => a.date.localeCompare(b.date));
+
+  // Videos uploaded this period + pre-existing library
+  const uploadedThisPeriod = log.reduce((s, e) => s + e.videos, 0);
+  const totalLibrary = CONFIG.startingLibrary + uploadedThisPeriod;
+
+  // Goal through today — only weekdays count
+  const goalThrough = weekdaysElapsed * CONFIG.dailyGoal;
+  const delta = uploadedThisPeriod - goalThrough;
+
+  // Avg per day based on weekdays elapsed only
+  const avgPerWeekday = weekdaysElapsed > 0 ? uploadedThisPeriod / weekdaysElapsed : 0;
+
+  // Projected total library — remaining weekdays at current avg
+  const projectedEnd = Math.round(totalLibrary + avgPerWeekday * weekdaysLeft);
+
+  // Projected revenue — next full month (March 2026 as proxy)
+  const nextMonthStart = new Date(2026, 2, 1);  // March 1
+  const nextMonthEnd   = new Date(2026, 2, 31); // March 31
+
+  // Revenue from total library (full $1.50 each in a future full month)
+  const existingRevenue = totalLibrary * CONFIG.revenuePerVideo;
+
+  // Revenue from videos yet to be uploaded — only on remaining weekdays
+  let futureRevenue = 0;
+  for (let d = 1; d <= daysLeft; d++) {
+    const uploadDate = new Date(today);
+    uploadDate.setDate(uploadDate.getDate() + d);
+    if (!isWeekday(uploadDate)) continue;
+    const dateStr = uploadDate.toISOString().split('T')[0];
+    const factor = prorateFactor(dateStr, nextMonthStart, nextMonthEnd);
+    futureRevenue += avgPerWeekday * CONFIG.revenuePerVideo * factor;
+  }
+
+  const projectedRevenue = existingRevenue + futureRevenue;
+
+  // Build daily series for chart
+  const series = [];
+  let cumActual = 0;
+  let cumGoal   = 0;
+  let day = new Date(start);
+  while (day <= end) {
+    const dateStr = day.toISOString().split('T')[0];
+    const entry = log.find(e => e.date === dateStr);
+    const isPast = day <= today;
+    if (entry) cumActual += entry.videos;
+    if (isPast && isWeekday(day)) cumGoal += CONFIG.dailyGoal;
+    series.push({
+      date: new Date(day),
+      cumActual: isPast || entry ? cumActual : null,
+      cumGoal,
+    });
+    day.setDate(day.getDate() + 1);
+  }
+
+  return {
+    uploadedThisPeriod, totalLibrary, delta, avgPerWeekday, projectedEnd,
+    projectedRevenue, daysLeft, weekdaysLeft, weekdaysElapsed,
+    goalThrough, series, log,
+  };
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+let chartInstance = null;
+
+function render() {
+  const c = compute();
+
+  // Hero — show total library size
+  document.getElementById('heroCount').textContent = c.totalLibrary;
+  document.getElementById('heroDaysLeft').textContent = c.daysLeft;
+
+  const badge = document.getElementById('paceBadge');
+  const detail = document.getElementById('paceDetail');
+  if (c.delta >= 0) {
+    badge.className = 'badge ahead';
+    badge.textContent = `+${c.delta} ahead`;
+  } else {
+    badge.className = 'badge behind';
+    badge.textContent = `${c.delta} behind`;
+  }
+  detail.textContent = `${c.uploadedThisPeriod} uploaded this period · goal was ${c.goalThrough} · ${c.weekdaysLeft} weekdays left`;
+
+  document.getElementById('runRate').textContent = fmt$(c.projectedRevenue);
+  document.getElementById('avgPerDay').textContent = c.avgPerWeekday.toFixed(1);
+
+  // Stats
+  const deltaEl = document.getElementById('statDelta');
+  deltaEl.textContent = (c.delta >= 0 ? '+' : '') + c.delta;
+  deltaEl.className = 'card-value ' + (c.delta >= 0 ? 'green' : 'red');
+
+  document.getElementById('statProjected').textContent = c.projectedEnd.toLocaleString();
+  document.getElementById('statRevenue').textContent = fmt$(c.projectedRevenue);
+
+  // Milestones — based on total library
+  const msEl = document.getElementById('milestones');
+  msEl.innerHTML = CONFIG.milestones.map(m => {
+    const pct = Math.min((c.totalLibrary / m.target) * 100, 100);
+    const rev = m.target * CONFIG.revenuePerVideo;
+    const remaining = Math.max(m.target - c.totalLibrary, 0);
+    return `
+      <div class="milestone">
+        <div class="milestone-header">
+          <span class="milestone-name">${m.label} — ${m.target.toLocaleString()} videos</span>
+          <span class="milestone-stats">${c.totalLibrary}/${m.target} &nbsp;·&nbsp; ${remaining > 0 ? remaining + ' to go' : 'COMPLETE'}</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill ${m.color}" style="width:${pct}%"></div>
+        </div>
+        <div class="milestone-revenue">${fmt$(rev)}/mo at this milestone</div>
+      </div>
+    `;
+  }).join('');
+
+  // Income replacement
+  document.getElementById('incomeTargetDisplay').textContent = fmt$(state.incomeTarget);
+  document.getElementById('incomeTargetInput').placeholder = state.incomeTarget;
+
+  const irEl = document.getElementById('incomeReplacementBars');
+  irEl.innerHTML = CONFIG.milestones.map(m => {
+    const rev = m.target * CONFIG.revenuePerVideo;
+    const pct = Math.min((rev / state.incomeTarget) * 100, 100);
+    const label = Math.round(pct) + '%';
+    return `
+      <div style="margin-bottom:14px;">
+        <div style="font-size:11px; color:#8888aa; margin-bottom:5px;">${m.label} (${m.target} videos) → ${fmt$(rev)}/mo</div>
+        <div class="income-bar-track">
+          <div class="income-bar-fill ${m.color.replace('fill-', 'bar-')}" style="width:${pct}%; background: ${m.color === 'fill-tier1' ? 'linear-gradient(90deg,#6366f1,#8b5cf6)' : m.color === 'fill-tier2' ? 'linear-gradient(90deg,#3b82f6,#06b6d4)' : 'linear-gradient(90deg,#10b981,#34d399)'}">
+            ${pct > 15 ? `<span>${label} of target</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('') + `
+    <div style="margin-top:4px;">
+      <div style="font-size:11px; color:#8888aa; margin-bottom:5px;">Current pace projection → ${fmt$(c.projectedRevenue)}/mo</div>
+      <div class="income-bar-track">
+        <div class="income-bar-fill" style="width:${Math.min((c.projectedRevenue/state.incomeTarget)*100,100)}%; background:linear-gradient(90deg,#f59e0b,#fbbf24)">
+          ${(c.projectedRevenue/state.incomeTarget)*100 > 15 ? `<span>${Math.round((c.projectedRevenue/state.incomeTarget)*100)}% of target</span>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Chart
+  const labels = c.series.map(s => formatDate(s.date));
+  const actualData = c.series.map(s => s.cumActual);
+  const goalData   = c.series.map(s => s.cumGoal);
+
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(document.getElementById('chart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Actual',
+          data: actualData,
+          borderColor: '#34d399',
+          backgroundColor: 'rgba(52,211,153,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#34d399',
+          fill: true,
+          tension: 0.3,
+          spanGaps: false,
+        },
+        {
+          label: 'Goal',
+          data: goalData,
+          borderColor: '#6366f1',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#8888aa', font: { size: 11 }, boxWidth: 16 }
+        },
+        tooltip: {
+          backgroundColor: '#1a1a24',
+          borderColor: '#2a2a3a',
+          borderWidth: 1,
+          titleColor: '#e8e8f0',
+          bodyColor: '#8888aa',
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#5a5a7a', font: { size: 10 }, maxTicksLimit: 12 },
+          grid: { color: '#1e1e2a' },
+        },
+        y: {
+          ticks: { color: '#5a5a7a', font: { size: 10 } },
+          grid: { color: '#1e1e2a' },
+        }
+      }
+    }
+  });
+
+  // Log table
+  const tbody = document.getElementById('logBody');
+  let cum = 0;
+  const rows = [...c.log].sort((a, b) => a.date.localeCompare(b.date));
+  tbody.innerHTML = rows.map((entry, i) => {
+    cum += entry.videos;
+    const entryDate = parseDate(entry.date);
+    const dow = entryDate.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const dayGoal = isWeekend ? 0 : CONFIG.dailyGoal;
+    const delta = entry.videos - dayGoal;
+    return `
+      <tr>
+        <td>${formatDate(entryDate)}${isWeekend ? ' <span style="font-size:10px;color:#5a5a7a;">OFF</span>' : ''}</td>
+        <td>${entry.videos}</td>
+        <td>${dayGoal}</td>
+        <td class="${delta >= 0 ? 'pos' : 'neg'}">${delta >= 0 ? '+' : ''}${delta}</td>
+        <td>${cum}</td>
+        <td><button class="btn btn-danger" onclick="deleteEntry(${i})">✕</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ─── ACTIONS ──────────────────────────────────────────────────────────────────
+function addEntry() {
+  const date   = document.getElementById('logDate').value;
+  const videos = parseInt(document.getElementById('logVideos').value);
+
+  if (!date || isNaN(videos) || videos < 0) {
+    alert('Please enter a valid date and video count.');
+    return;
+  }
+
+  // Replace if date exists
+  const existing = state.log.findIndex(e => e.date === date);
+  if (existing >= 0) {
+    state.log[existing].videos = videos;
+  } else {
+    state.log.push({ date, videos });
+  }
+
+  save();
+  render();
+
+  document.getElementById('logVideos').value = '';
+}
+
+function deleteEntry(index) {
+  const sorted = [...state.log].sort((a, b) => a.date.localeCompare(b.date));
+  const entry = sorted[index];
+  state.log = state.log.filter(e => e.date !== entry.date);
+  save();
+  render();
+}
+
+function updateIncomeTarget(val) {
+  const n = parseFloat(val);
+  if (!isNaN(n) && n > 0) {
+    state.incomeTarget = n;
+    save();
+    render();
+  }
+}
+
+// Set default date to today
+document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
+
+render();
+</script>
+</body>
+</html>
